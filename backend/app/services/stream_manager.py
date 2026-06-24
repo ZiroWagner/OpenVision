@@ -1,42 +1,74 @@
 import asyncio
-import uuid
+import io
 
 import av
-from aiortc import RTCPeerConnection, VideoStreamTrack
-
-from app.core.config import get_settings
-
-settings = get_settings()
-
-pc_pool: dict[str, RTCPeerConnection] = {}
 
 
-class CameraVideoTrack(VideoStreamTrack):
-    def __init__(self, rtsp_url: str) -> None:
-        super().__init__()
-        self.container = av.open(rtsp_url)
-        self.stream = self.container.streams.video[0]
+class FrameReader:
+    def __init__(self, rtsp_url: str, fps: int = 15):
+        self.rtsp_url = rtsp_url
+        self.frame_interval = 1.0 / fps
+        self._container: av.container.InputContainer | None = None
+        self._lock = asyncio.Lock()
 
-    async def recv(self) -> av.VideoFrame:
-        await asyncio.sleep(0)
-        for frame in self.container.decode(video=0):
-            frame.pts = None
-            return frame
-        raise StopAsyncIteration
+    async def _open(self) -> bool:
+        try:
+            loop = asyncio.get_running_loop()
+            self._container = await loop.run_in_executor(
+                None,
+                lambda: av.open(
+                    self.rtsp_url,
+                    options={
+                        "rtsp_transport": "tcp",
+                        "stimeout": "3000000",
+                        "max_delay": "500000",
+                    },
+                ),
+            )
+            return True
+        except Exception:
+            self._container = None
+            return False
 
+    async def get_jpeg_frame(self) -> bytes | None:
+        async with self._lock:
+            if self._container is None:
+                if not await self._open():
+                    return None
 
-def create_peer_connection() -> RTCPeerConnection:
-    pc = RTCPeerConnection()
-    pc_id = str(uuid.uuid4())
-    pc_pool[pc_id] = pc
-    return pc
+            try:
+                loop = asyncio.get_running_loop()
 
+                def _decode() -> bytes | None:
+                    for frame in self._container.decode(video=0):
+                        img = frame.to_image()
+                        buf = io.BytesIO()
+                        img.save(buf, format="JPEG", quality=75)
+                        return buf.getvalue()
+                    return None
 
-def get_peer_connection(pc_id: str) -> RTCPeerConnection | None:
-    return pc_pool.get(pc_id)
+                jpeg = await loop.run_in_executor(None, _decode)
+                if jpeg is not None:
+                    return jpeg
 
+                self._container.close()
+                self._container = None
+                return None
 
-async def remove_peer_connection(pc_id: str) -> None:
-    pc = pc_pool.pop(pc_id, None)
-    if pc:
-        await pc.close()
+            except Exception:
+                try:
+                    if self._container:
+                        self._container.close()
+                except Exception:
+                    pass
+                self._container = None
+                return None
+
+    async def close(self):
+        async with self._lock:
+            if self._container:
+                try:
+                    self._container.close()
+                except Exception:
+                    pass
+                self._container = None

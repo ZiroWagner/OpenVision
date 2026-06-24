@@ -17,6 +17,7 @@ async def check_camera_health(camera: Camera) -> bool:
             "-print_format", "json",
             "-show_streams",
             "-timeout", "5000000",
+            "-rtsp_transport", "tcp",
             camera.rtsp_url,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,

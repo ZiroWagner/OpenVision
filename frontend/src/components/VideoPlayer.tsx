@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { WebRTCClient } from "../lib/webrtc";
+import { StreamClient } from "../lib/stream-client";
 import { Wifi, WifiOff } from "lucide-react";
 
 interface VideoPlayerProps {
@@ -9,33 +9,39 @@ interface VideoPlayerProps {
 }
 
 export function VideoPlayer({ cameraId, cameraName, location }: VideoPlayerProps) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const clientRef = useRef<WebRTCClient | null>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
+  const clientRef = useRef<StreamClient | null>(null);
   const [status, setStatus] = useState<"connecting" | "live" | "offline">(
     "connecting",
   );
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const client = new WebRTCClient();
+    const client = new StreamClient();
     clientRef.current = client;
 
-    client.onRemoteStream = (stream) => {
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        setStatus("live");
+    client.onFrame = (blob) => {
+      const url = URL.createObjectURL(blob);
+      if (imgRef.current) {
+        const prev = imgRef.current.src;
+        imgRef.current.src = url;
+        if (prev.startsWith("blob:")) URL.revokeObjectURL(prev);
       }
     };
 
-    client.onError = (msg) => {
-      setError(msg);
-      setStatus("offline");
+    client.onStatus = (newStatus) => {
+      if (newStatus === "live") {
+        setStatus("live");
+        setError(null);
+      } else if (newStatus === "connecting") {
+        setStatus("connecting");
+      } else {
+        setStatus("offline");
+        setError("Señal perdida, reconectando...");
+      }
     };
 
-    client.connect(cameraId).catch((err) => {
-      setError(err instanceof Error ? err.message : "Error de conexión");
-      setStatus("offline");
-    });
+    client.connect(cameraId);
 
     return () => {
       client.disconnect();
@@ -44,11 +50,9 @@ export function VideoPlayer({ cameraId, cameraName, location }: VideoPlayerProps
 
   return (
     <div className="relative aspect-video bg-muted rounded-lg overflow-hidden">
-      <video
-        ref={videoRef}
-        autoPlay
-        playsInline
-        muted
+      <img
+        ref={imgRef}
+        alt={cameraName}
         className="w-full h-full object-cover"
       />
 
