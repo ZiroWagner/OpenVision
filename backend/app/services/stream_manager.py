@@ -4,7 +4,7 @@ import io
 import av
 
 
-def _encode_jpeg(frame: av.VideoFrame, quality: int = 75) -> bytes:
+def _encode_jpeg(frame: av.VideoFrame, quality: int = 50) -> bytes:
     img = frame.to_image()
     buf = io.BytesIO()
     img.save(buf, format="JPEG", quality=quality)
