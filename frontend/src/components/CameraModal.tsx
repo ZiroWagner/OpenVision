@@ -115,15 +115,18 @@ export function CameraModal({ open, camera, onClose, onSaved }: CameraModalProps
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">URL RTSP</label>
+            <label className="block text-sm font-medium text-foreground mb-1">URL / Ruta</label>
             <input
               type="text"
               required
               value={rtspUrl}
               onChange={(e) => setRtspUrl(e.target.value)}
-              placeholder="rtsp://mediamtx:8554/cam1"
+              placeholder='/storage/test-video.mp4 o rtsp://camara:8554/stream'
               className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             />
+            <p className="text-xs text-muted-foreground mt-1">
+              Local: /app/storage/test-video.mp4 — RTSP: rtsp://ip:8554/stream
+            </p>
           </div>
 
           <div>

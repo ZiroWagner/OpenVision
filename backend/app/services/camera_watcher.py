@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 
 from sqlalchemy import select
 
@@ -10,6 +11,11 @@ logger = logging.getLogger(__name__)
 
 
 async def check_camera_health(camera: Camera) -> bool:
+    url = camera.rtsp_url
+
+    if not url.startswith("rtsp://") and not url.startswith("rtsps://"):
+        return os.path.exists(url)
+
     try:
         proc = await asyncio.create_subprocess_exec(
             "ffprobe",
@@ -18,7 +24,7 @@ async def check_camera_health(camera: Camera) -> bool:
             "-show_streams",
             "-timeout", "5000000",
             "-rtsp_transport", "tcp",
-            camera.rtsp_url,
+            url,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )

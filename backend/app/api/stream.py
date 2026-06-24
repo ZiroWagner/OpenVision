@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.models.camera import Camera
-from app.services.stream_manager import FrameReader
+from app.services.stream_manager import create_reader
 
 router = APIRouter()
 
@@ -32,7 +32,7 @@ async def stream_websocket(
 
     await websocket.accept()
 
-    reader = FrameReader(camera.rtsp_url, fps=camera.fps)
+    reader = create_reader(camera.rtsp_url, fps=camera.fps)
 
     try:
         while True:

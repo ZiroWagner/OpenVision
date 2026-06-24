@@ -32,26 +32,6 @@ services:
       retries: 5
     restart: unless-stopped
 
-  mediamtx:
-    image: bluenviron/mediamtx:latest
-    container_name: openvision-mediamtx
-    ports:
-      - "8554:8554"
-      - "8888:8888"
-    restart: unless-stopped
-
-  stream-source:
-    image: linuxserver/ffmpeg:latest
-    container_name: openvision-stream-source
-    volumes:
-      - ../../storage:/storage:ro
-    command: >
-      -stream_loop -1 -re -i /storage/test-video.mp4
-      -c:v libx264 -preset ultrafast -tune zerolatency -f rtsp rtsp://mediamtx:8554/cam1
-    depends_on:
-      - mediamtx
-    restart: unless-stopped
-
   backend:
     build:
       context: ../../backend
@@ -63,7 +43,6 @@ services:
       SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
       STORAGE_PATH: /app/storage
       DEBUG: ${DEBUG:-false}
-      STREAM_SIMULATOR_URL: rtsp://mediamtx:8554/cam1
     volumes:
       - ../../storage:/app/storage
     ports:
@@ -73,8 +52,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      mediamtx:
-        condition: service_started
     restart: unless-stopped
 
   frontend:
