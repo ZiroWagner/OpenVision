@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Camera, Plus, Wifi, WifiOff } from "lucide-react";
+import { Camera, Plus } from "lucide-react";
+import { VideoPlayer } from "../components/VideoPlayer";
 
 interface CameraData {
   id: string;
@@ -52,28 +53,13 @@ export function Monitoreo() {
               key={cam.id}
               className="rounded-xl border border-border bg-card overflow-hidden"
             >
-              <div className="aspect-video bg-muted flex items-center justify-center relative">
-                <Camera className="h-12 w-12 text-muted-foreground/30" />
-                <span className="absolute top-2 right-2">
-                  {cam.status === "online" ? (
-                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-500 text-xs font-medium">
-                      <Wifi className="h-3 w-3" /> En vivo
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-red-500/20 text-red-500 text-xs font-medium">
-                      <WifiOff className="h-3 w-3" /> Offline
-                    </span>
-                  )}
-                </span>
-              </div>
+              <VideoPlayer
+                cameraId={cam.id}
+                cameraName={cam.name}
+                location={cam.location}
+              />
               <div className="p-4">
-                <h3 className="font-semibold text-foreground">{cam.name}</h3>
-                {cam.location && (
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {cam.location}
-                  </p>
-                )}
-                <p className="text-xs text-muted-foreground mt-2 truncate">
+                <p className="text-xs text-muted-foreground truncate">
                   {cam.rtsp_url}
                 </p>
               </div>

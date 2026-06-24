@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     camera_check_interval: int = 30
     event_retention_days: int = 30
 
+    stream_simulator_url: str = "rtsp://mediamtx:8554/cam1"
+    webrtc_ice_servers: list[str] = ["stun:stun.l.google.com:19302"]
+
 
 @lru_cache
 def get_settings() -> Settings:

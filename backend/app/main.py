@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import alerts, auth, cameras, events, users, ws
+from app.api import alerts, auth, cameras, events, stream, users, ws
 from app.core.config import get_settings
 from app.core.database import Base, engine
 
@@ -38,6 +38,7 @@ app.include_router(alerts.router, prefix="/api")
 app.include_router(users.router, prefix="/api")
 app.include_router(auth.router, prefix="/api")
 app.include_router(ws.router)
+app.include_router(stream.router)
 
 
 @app.get("/api/health")

@@ -3,6 +3,12 @@ FROM python:3.11-slim AS builder
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libpq-dev \
+    libavformat-dev \
+    libavcodec-dev \
+    libavdevice-dev \
+    libavutil-dev \
+    libswscale-dev \
+    libswresample-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -15,6 +21,8 @@ FROM python:3.11-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
     ffmpeg \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -30,5 +38,5 @@ EXPOSE 8000
 
 CMD ["sh", "-c", " \
     alembic upgrade head 2>/dev/null || echo 'Alembic migration skipped'; \
-    uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4 \
+    uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1 \
     "]
