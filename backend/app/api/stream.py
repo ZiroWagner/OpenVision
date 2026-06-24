@@ -1,6 +1,12 @@
-from aiortc import RTCSessionDescription
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+import uuid as uuid_lib
 
+from aiortc import RTCSessionDescription
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.database import get_db
+from app.models.camera import Camera
 from app.services.stream_manager import (
     CameraVideoTrack,
     create_peer_connection,
@@ -11,7 +17,23 @@ router = APIRouter()
 
 
 @router.websocket("/ws/stream/{camera_id}")
-async def stream_websocket(websocket: WebSocket, camera_id: str):
+async def stream_websocket(
+    websocket: WebSocket,
+    camera_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        uid = uuid_lib.UUID(camera_id)
+    except ValueError:
+        await websocket.close(code=4004, reason="Invalid camera ID")
+        return
+
+    result = await db.execute(select(Camera).where(Camera.id == uid))
+    camera = result.scalar_one_or_none()
+    if camera is None:
+        await websocket.close(code=4004, reason="Camera not found")
+        return
+
     await websocket.accept()
 
     pc = create_peer_connection()
@@ -46,7 +68,7 @@ async def stream_websocket(websocket: WebSocket, camera_id: str):
             await remove_peer_connection(str(id(pc)))
 
     try:
-        track = CameraVideoTrack(f"rtsp://mediamtx:8554/{camera_id}")
+        track = CameraVideoTrack(camera.rtsp_url)
         pc.addTrack(track)
 
         data = await websocket.receive_json()
