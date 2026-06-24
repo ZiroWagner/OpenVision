@@ -23,9 +23,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     libgl1 \
     libglib2.0-0 \
+    wget \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
+
+RUN mkdir -p /app/models && \
+    wget -q --show-progress \
+    https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11n.onnx \
+    -O /app/models/yolo11n.onnx
 
 COPY --from=builder /root/.local /root/.local
 ENV PATH=/root/.local/bin:$PATH

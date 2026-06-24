@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Plus, Trash2, Pencil } from "lucide-react";
 import { cn } from "../lib/utils";
+import { api } from "../lib/api";
+import { CameraModal } from "../components/CameraModal";
 
 interface CameraData {
   id: string;
@@ -9,6 +11,9 @@ interface CameraData {
   location: string | null;
   status: string;
   enabled: boolean;
+  fps: number;
+  width: number;
+  height: number;
 }
 
 interface UserData {
@@ -25,21 +30,50 @@ export function Config() {
   const [activeTab, setActiveTab] = useState<Tab>("cameras");
   const [cameras, setCameras] = useState<CameraData[]>([]);
   const [users, setUsers] = useState<UserData[]>([]);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingCamera, setEditingCamera] = useState<CameraData | null>(null);
+
+  const loadCameras = useCallback(() => {
+    api.cameras.list().then((data) => setCameras(data as CameraData[])).catch(() => {});
+  }, []);
+
+  const loadUsers = useCallback(() => {
+    api.users.list().then((data) => {
+      setUsers(
+        (data as UserData[]).map((u) => ({ ...u, is_active: true })),
+      );
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
-    fetch("/api/cameras")
-      .then((r) => r.json())
-      .then(setCameras)
-      .catch(() => {});
-    fetch("/api/users")
-      .then((r) => r.json())
-      .then((data) => {
-        setUsers(
-          data.map((u: UserData) => ({ ...u, is_active: true } satisfies UserData)),
-        );
-      })
-      .catch(() => {});
-  }, []);
+    loadCameras();
+    loadUsers();
+  }, [loadCameras, loadUsers]);
+
+  function openCreateModal() {
+    setEditingCamera(null);
+    setModalOpen(true);
+  }
+
+  function openEditModal(camera: CameraData) {
+    setEditingCamera(camera);
+    setModalOpen(true);
+  }
+
+  function closeModal() {
+    setModalOpen(false);
+    setEditingCamera(null);
+  }
+
+  async function handleDelete(camera: CameraData) {
+    if (!window.confirm(`¿Eliminar la cámara "${camera.name}"?`)) return;
+    try {
+      await api.cameras.delete(camera.id);
+      loadCameras();
+    } catch {
+      // ignore
+    }
+  }
 
   const tabs: { key: Tab; label: string }[] = [
     { key: "cameras", label: "Cámaras" },
@@ -79,6 +113,7 @@ export function Config() {
           <div className="flex justify-end">
             <button
               type="button"
+              onClick={openCreateModal}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium"
             >
               <Plus className="h-4 w-4" />
@@ -120,10 +155,18 @@ export function Config() {
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="inline-flex gap-1">
-                        <button type="button" className="p-1.5 rounded-md hover:bg-muted text-muted-foreground">
+                        <button
+                          type="button"
+                          onClick={() => openEditModal(cam)}
+                          className="p-1.5 rounded-md hover:bg-muted text-muted-foreground"
+                        >
                           <Pencil className="h-4 w-4" />
                         </button>
-                        <button type="button" className="p-1.5 rounded-md hover:bg-destructive/10 text-destructive">
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(cam)}
+                          className="p-1.5 rounded-md hover:bg-destructive/10 text-destructive"
+                        >
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
@@ -205,6 +248,13 @@ export function Config() {
           </div>
         </div>
       )}
+
+      <CameraModal
+        open={modalOpen}
+        camera={editingCamera}
+        onClose={closeModal}
+        onSaved={loadCameras}
+      />
     </div>
   );
 }
