@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -6,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api import alerts, auth, cameras, events, stream, users, ws
 from app.core.config import get_settings
 from app.core.database import Base, engine
+from app.services.camera_watcher import camera_watch_loop
 
 settings = get_settings()
 
@@ -14,7 +16,9 @@ settings = get_settings()
 async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    task = asyncio.create_task(camera_watch_loop(settings.camera_check_interval))
     yield
+    task.cancel()
     await engine.dispose()
 
 

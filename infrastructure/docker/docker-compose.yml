@@ -43,8 +43,10 @@ services:
   stream-source:
     image: linuxserver/ffmpeg:latest
     container_name: openvision-stream-source
+    volumes:
+      - ../../storage:/storage:ro
     command: >
-      -re -f lavfi -i "testsrc2=size=1280x720:rate=15"
+      -stream_loop -1 -re -i /storage/test-video.mp4
       -c:v libx264 -preset ultrafast -tune zerolatency -f rtsp rtsp://mediamtx:8554/cam1
     depends_on:
       - mediamtx
